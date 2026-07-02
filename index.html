@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Workshop: Prompting – vom Zufall zum Ziel</title>
+<script>
+  (() => {
+    const param = new URLSearchParams(window.location.search).get("scoutTheme");
+    const theme =
+      param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
+<style>
+  :root {
+    color-scheme: light;
+    --cp-bg: #f7f4ef;
+    --cp-bg-elevated: #fcfbf8;
+    --cp-surface: #ffffff;
+    --cp-surface-soft: #f5f5f5;
+    --cp-border: #dedede;
+    --cp-border-strong: #919191;
+    --cp-text: #242424;
+    --cp-text-muted: #5c5c5c;
+    --cp-text-soft: #6f6f6f;
+    --cp-accent: #0f6cbd;
+    --cp-accent-hover: #115ea3;
+    --cp-accent-soft: rgba(15, 108, 189, 0.08);
+    --cp-accent-fg: #ffffff;
+    --cp-success: #16a34a;
+    --cp-danger: #dc2626;
+    --cp-warning: #f59e0b;
+    --cp-link: #0078d4;
+    --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+    --cp-overlay: rgba(255, 255, 255, 0.8);
+    --cp-panel: rgba(255, 255, 255, 0.86);
+    --cp-panel-strong: rgba(255, 255, 255, 0.96);
+    --cp-sheen: rgba(255, 255, 255, 0.55);
+    --cp-highlight: rgba(15, 108, 189, 0.12);
+    --cp-copilot: linear-gradient(120deg, #18b7e0 0%, #6e5be6 50%, #e3559a 100%);
+  }
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --cp-bg: #3d3b3a;
+    --cp-bg-elevated: #343231;
+    --cp-surface: #292929;
+    --cp-surface-soft: #2e2e2e;
+    --cp-border: #474747;
+    --cp-border-strong: #5f5f5f;
+    --cp-text: #dedede;
+    --cp-text-muted: #919191;
+    --cp-text-soft: #b0b0b0;
+    --cp-accent: #4da6ff;
+    --cp-accent-hover: #6cb4ff;
+    --cp-accent-soft: rgba(77, 166, 255, 0.14);
+    --cp-accent-fg: #1a1a1a;
+    --cp-success: #4ade80;
+    --cp-danger: #f87171;
+    --cp-warning: #fbbf24;
+    --cp-link: #4da6ff;
+    --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+    --cp-overlay: rgba(41, 41, 41, 0.88);
+    --cp-panel: rgba(41, 41, 41, 0.72);
+    --cp-panel-strong: rgba(41, 41, 41, 0.96);
+    --cp-sheen: rgba(255, 255, 255, 0.04);
+    --cp-highlight: rgba(77, 166, 255, 0.12);
+    --cp-copilot: linear-gradient(120deg, #2bd0f0 0%, #8a7bf0 50%, #f06aa8 100%);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--cp-bg);
+    color: var(--cp-text);
+    font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 24px 80px; }
+
+  /* ---------- Header ---------- */
+  header.hero {
+    position: relative; overflow: hidden;
+    background:
+      radial-gradient(900px 360px at 88% -30%, rgba(110, 91, 230, 0.10), transparent 60%),
+      radial-gradient(720px 320px at 10% -40%, rgba(24, 183, 224, 0.10), transparent 60%),
+      var(--cp-bg-elevated);
+    border-bottom: 1px solid var(--cp-border);
+  }
+  header.hero::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+    background: var(--cp-copilot);
+  }
+  .hero-art {
+    position: absolute; top: 0; right: 0; width: 60%; height: 100%;
+    z-index: 0; pointer-events: none; opacity: 0.85;
+    -webkit-mask-image: linear-gradient(to left, #000 32%, transparent 92%);
+            mask-image: linear-gradient(to left, #000 32%, transparent 92%);
+  }
+  .hero-art svg { width: 100%; height: 100%; display: block; }
+  .qr-badge {
+    position: absolute; top: 74px; right: 24px; z-index: 2;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    background: var(--cp-surface); border: 1px solid var(--cp-border);
+    border-radius: 12px; padding: 9px 9px 7px;
+    box-shadow: 0 0 2px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.14);
+  }
+  .qr-badge svg { width: 92px; height: 92px; display: block; }
+  .qr-cap { font-size: 0.7rem; font-weight: 600; color: var(--cp-text-muted); text-align: center; line-height: 1.15; }
+  @media (max-width: 860px) { .qr-badge { display: none; } }
+  .hero-inner { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 36px 24px 34px; }
+  .brandbar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    margin-bottom: 18px; font-size: 0.86rem;
+  }
+  .brand-ms { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: var(--cp-text); }
+  .brand-ms svg { display: block; }
+  .brand-sep { width: 1px; height: 15px; background: var(--cp-border-strong); }
+  .brand-event { color: var(--cp-text-soft); font-weight: 500; }
+  .brand-copilot {
+    margin-left: auto; display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 13px; border-radius: 999px; font-weight: 600; color: var(--cp-text);
+    background: var(--cp-surface); border: 1px solid var(--cp-border);
+  }
+  .cop-mark {
+    width: 15px; height: 15px; border-radius: 5px; flex: none;
+    background: var(--cp-copilot); box-shadow: 0 1px 3px rgba(110, 91, 230, 0.35);
+  }
+  h1 { font-size: 2.1rem; line-height: 1.15; margin: 18px 0 8px; letter-spacing: -0.01em; }
+  .hero p.lead { font-size: 1.06rem; color: var(--cp-text-muted); margin: 0; max-width: 60ch; }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 22px; font-size: 0.9rem; color: var(--cp-text-soft); }
+  .meta-row span { display: inline-flex; align-items: center; gap: 7px; }
+
+  /* ---------- Sections ---------- */
+  section { margin-top: 38px; }
+  h2 { font-size: 1.35rem; margin: 0 0 14px; display: flex; align-items: center; gap: 11px; }
+  h2 .num {
+    flex: none; width: 32px; height: 32px; border-radius: 9px;
+    background: var(--cp-copilot); color: #ffffff;
+    font-size: 0.95rem; font-weight: 700; display: grid; place-items: center;
+  }
+  h3 { font-size: 1.02rem; margin: 0 0 8px; }
+  p { margin: 0 0 12px; }
+
+  .card {
+    background: var(--cp-surface); border: 1px solid var(--cp-border);
+    border-radius: 16px; padding: 22px 24px;
+    box-shadow: 0 0 2px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.14);
+  }
+
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .mini { background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 12px; padding: 16px 16px; }
+  .mini .ico { font-size: 1.4rem; }
+  .mini .badge {
+    display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 8px;
+    background: var(--cp-copilot); color: #fff; font-weight: 800; font-size: 0.9rem;
+  }
+  .mini h3 { margin: 8px 0 4px; }
+  .mini p { font-size: 0.9rem; color: var(--cp-text-muted); margin: 0; }
+
+  ul.tight { margin: 6px 0 0; padding-left: 20px; }
+  ul.tight li { margin-bottom: 5px; }
+
+  /* ---------- Callout ---------- */
+  .callout {
+    border-left: 4px solid var(--cp-accent); background: var(--cp-accent-soft);
+    border-radius: 0 12px 12px 0; padding: 13px 16px; margin: 14px 0; font-size: 0.92rem;
+  }
+  .callout .tag {
+    display: inline-flex; align-items: center; gap: 6px; font-weight: 700;
+    color: var(--cp-accent); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .callout p { margin: 4px 0 0; color: var(--cp-text); }
+
+  .tipbox {
+    background: var(--cp-surface-soft); border: 1px dashed var(--cp-border-strong);
+    border-radius: 12px; padding: 14px 16px; font-size: 0.9rem; color: var(--cp-text-muted); margin-top: 14px;
+  }
+
+  /* ---------- Good/Bad comparison ---------- */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+  .cmp { border: 1px solid var(--cp-border); border-radius: 12px; padding: 14px 16px; background: var(--cp-surface); }
+  .cmp .lbl { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 8px; }
+  .cmp.bad { border-color: rgba(220,38,38,0.35); }
+  .cmp.bad .lbl { color: var(--cp-danger); }
+  .cmp.good { border-color: rgba(22,163,74,0.35); }
+  .cmp.good .lbl { color: var(--cp-success); }
+  .cmp p { font-size: 0.9rem; margin: 0; color: var(--cp-text); font-style: italic; }
+  @media (max-width: 640px) { .compare { grid-template-columns: 1fr; } }
+
+  /* ---------- Prompt boxes with toolbar header ---------- */
+  .promptbox {
+    background: var(--cp-bg-elevated); border: 1px solid var(--cp-border);
+    border-radius: 12px; margin-top: 12px; overflow: hidden;
+  }
+  .pbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 12px 9px 16px; background: var(--cp-surface-soft);
+    border-bottom: 1px solid var(--cp-border);
+  }
+  .pbar-bottom { border-bottom: none; border-top: 1px solid var(--cp-border); }
+  .pbar-title { font-size: 0.82rem; font-weight: 600; color: var(--cp-text-soft); letter-spacing: 0.02em; }
+  .promptbox pre {
+    margin: 0; padding: 16px 18px; white-space: pre-wrap;
+    font-family: Consolas, "Courier New", Courier, monospace;
+    font-size: 0.86rem; line-height: 1.55; color: var(--cp-text);
+    -webkit-user-select: text; user-select: text;
+    max-height: 460px; overflow-y: auto;
+  }
+  .copybtn {
+    background: var(--cp-accent); color: var(--cp-accent-fg); border: none;
+    border-radius: 8px; padding: 6px 14px; font-size: 0.8rem; font-weight: 600;
+    cursor: pointer; font-family: inherit; transition: background 0.15s ease; white-space: nowrap;
+    -webkit-user-select: none; user-select: none;
+  }
+  .copybtn:hover { background: var(--cp-accent-hover); }
+  .copybtn.done { background: var(--cp-success); }
+  .copybtn.fail { background: var(--cp-warning); color: #1a1a1a; border-color: var(--cp-warning); }
+
+  /* editable placeholders – highlighted in accent */
+  .ph { color: var(--cp-accent); font-weight: 700; }
+  .ph-empty { color: var(--cp-text-soft); font-style: italic; opacity: 0.85; }
+
+  /* ---------- Interactive config builder ---------- */
+  .livehead { display: flex; align-items: center; gap: 8px; margin: 18px 0 0; font-size: 0.92rem; font-weight: 600; color: var(--cp-text); }
+  .livehead .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--cp-success); }
+  details.config { margin-top: 16px; border: 1px solid var(--cp-border); border-radius: 12px; background: var(--cp-surface); overflow: hidden; }
+  details.config > summary { list-style: none; cursor: pointer; padding: 13px 18px; font-weight: 600; font-size: 1.02rem; display: flex; align-items: center; gap: 10px; background: var(--cp-accent-soft); color: var(--cp-text); user-select: none; }
+  details.config > summary::-webkit-details-marker { display: none; }
+  details.config > summary::before { content: "\25B8"; color: var(--cp-accent); font-size: 0.9rem; flex: none; }
+  details.config[open] > summary::before { content: "\25BE"; }
+  details.config > summary .sumhint { font-weight: 400; font-size: 0.8rem; color: var(--cp-text-soft); }
+  .config-body { padding: 14px 18px 18px; }
+
+  .fgroup { margin-top: 20px; }
+  .fgroup:first-of-type { margin-top: 10px; }
+  .fgroup-title { font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--cp-text-soft); margin: 0 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--cp-border); }
+  .fgroup-title .fghint { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--cp-text-soft); }
+
+  .frow { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+  .flabel { flex: none; width: 118px; padding-top: 7px; font-weight: 600; font-size: 0.88rem; }
+  .fcontrol { flex: 1 1 260px; min-width: 0; }
+  .fcontrol input[type="text"] { width: 100%; box-sizing: border-box; border: 1px solid var(--cp-border-strong); background: var(--cp-bg-elevated); color: var(--cp-text); border-radius: 9px; padding: 7px 12px; font-size: 0.9rem; font-family: inherit; }
+  .fcontrol input[type="text"]:focus { outline: none; border-color: var(--cp-accent); box-shadow: 0 0 0 3px var(--cp-accent-soft); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .chip { white-space: nowrap; border: 1px solid var(--cp-border-strong); background: var(--cp-surface); color: var(--cp-text); border-radius: 999px; padding: 5px 12px; font-size: 0.82rem; cursor: pointer; font-family: inherit; transition: all 0.12s ease; }
+  .chip:hover { border-color: var(--cp-accent); }
+  .chip.on { background: var(--cp-accent); color: var(--cp-accent-fg); border-color: var(--cp-accent); }
+  .chip .x { margin-left: 6px; opacity: 0.85; font-weight: 700; }
+  .addwrap { display: inline-flex; gap: 6px; align-items: center; }
+  .addwrap input { border: 1px dashed var(--cp-border-strong); background: var(--cp-bg-elevated); color: var(--cp-text); border-radius: 999px; padding: 5px 12px; font-size: 0.82rem; font-family: inherit; width: 120px; max-width: 45vw; }
+  .addwrap input:focus { outline: none; border-color: var(--cp-accent); border-style: solid; }
+  .addbtn { border: 1px solid var(--cp-border-strong); background: var(--cp-surface); color: var(--cp-accent); border-radius: 999px; width: 28px; height: 28px; font-size: 1rem; font-weight: 700; cursor: pointer; font-family: inherit; line-height: 1; flex: none; }
+  .addbtn:hover { border-color: var(--cp-accent); background: var(--cp-accent-soft); }
+  .freset { margin-top: 16px; background: none; border: none; color: var(--cp-accent); font-size: 0.82rem; cursor: pointer; font-family: inherit; padding: 4px 0; text-decoration: underline; }
+  .freset:hover { color: var(--cp-accent-hover); }
+
+  a { color: var(--cp-link); }
+
+  footer {
+    margin-top: 50px; padding-top: 20px; border-top: 1px solid var(--cp-border);
+    font-size: 0.85rem; color: var(--cp-text-soft); text-align: center;
+  }
+
+  @media (max-width: 760px) { .grid4 { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 640px) { .grid3, .grid4 { grid-template-columns: 1fr; } h1 { font-size: 1.7rem; } }
+  @media print {
+    .copybtn { display: none; }
+    body { background: #fff; }
+    .card, .mini, .promptbox { box-shadow: none; }
+    section { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-art" aria-hidden="true">
+    <svg viewBox="0 0 640 340" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="haG" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#18b7e0"/>
+          <stop offset=".5" stop-color="#6e5be6"/>
+          <stop offset="1" stop-color="#e3559a"/>
+        </linearGradient>
+      </defs>
+      <g stroke="url(#haG)" stroke-width="1.3" opacity=".5" fill="none">
+        <path d="M150 70 L250 130 L210 240 M250 130 L330 80 L360 190 L250 130 M330 80 L440 130 L470 250 M440 130 L545 90 M360 190 L470 250 M210 240 L400 280 L470 250 M400 280 L360 190 M545 90 L590 200 L470 250 M250 40 L330 80"/>
+      </g>
+      <g fill="url(#haG)">
+        <circle cx="150" cy="70" r="4.5"/>
+        <circle cx="250" cy="130" r="6"/>
+        <circle cx="210" cy="240" r="4.5"/>
+        <circle cx="330" cy="80" r="5"/>
+        <circle cx="360" cy="190" r="6"/>
+        <circle cx="440" cy="130" r="5"/>
+        <circle cx="470" cy="250" r="6"/>
+        <circle cx="545" cy="90" r="4.5"/>
+        <circle cx="590" cy="200" r="4.5"/>
+        <circle cx="400" cy="280" r="4.5"/>
+        <circle cx="250" cy="40" r="3.5"/>
+      </g>
+      <g fill="url(#haG)" opacity=".95">
+        <path d="M505 148 c3 11 9 17 20 20 c-11 3 -17 9 -20 20 c-3 -11 -9 -17 -20 -20 c11 -3 17 -9 20 -20Z"/>
+        <path d="M298 232 c2 7 6 11 13 13 c-7 2 -11 6 -13 13 c-2 -7 -6 -11 -13 -13 c7 -2 11 -6 13 -13Z"/>
+      </g>
+    </svg>
+  </div>
+  <div class="hero-inner">
+    <!-- QR-Code wird ergänzt, sobald die Seite im GitHub-Repo veröffentlicht ist.
+         Ersetze das <svg> unten durch den generierten QR-Code (siehe README.md). -->
+    <div class="qr-badge" aria-label="QR-Code zur Workshop-Seite" hidden>
+      <!-- QR-SVG hier einfügen -->
+      <span class="qr-cap">📱 Zu Hause<br>öffnen</span>
+    </div>
+    <div class="brandbar">
+      <span class="brand-ms">
+        <svg width="17" height="17" viewBox="0 0 23 23" aria-hidden="true"><rect x="1" y="1" width="10" height="10" fill="#F25022"/><rect x="12" y="1" width="10" height="10" fill="#7FBA00"/><rect x="1" y="12" width="10" height="10" fill="#00A4EF"/><rect x="12" y="12" width="10" height="10" fill="#FFB900"/></svg>
+        Microsoft
+      </span>
+      <span class="brand-sep"></span>
+      <span class="brand-event">Nacht der Technik · Köln · 3. Juli 2026</span>
+      <span class="brand-copilot"><span class="cop-mark"></span> Microsoft Copilot</span>
+    </div>
+    <h1>Prompting – vom Zufall zum Ziel</h1>
+    <p class="lead">Ein guter Prompt ist kein Zufall, sondern ein klarer Arbeitsauftrag an die KI. In diesem Workshop lernst du die <strong>ZIEL-Formel</strong> für starke Prompts – und baust dir damit deine ganz persönliche <strong>„Toy Yourself"</strong>-Figur mit Microsoft Copilot.</p>
+    <div class="meta-row">
+      <span>🕒 ca. 30 Minuten</span>
+      <span>🤖 Microsoft Copilot</span>
+      <span>🎨 Bild-Prompt zum Mitnehmen</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- Intro -->
+  <section>
+    <div class="card">
+      <h3>Worum geht's?</h3>
+      <p style="margin-bottom:16px;color:var(--cp-text-muted)">Fast jede:r hat schon mal einen KI-Chatbot benutzt und war mit der Antwort unzufrieden. Meistens liegt das nicht an der KI – sondern am <strong>Prompt</strong>. Denn ein Prompt ist keine beiläufige Frage, sondern ein <strong>Arbeitsauftrag</strong>: Je klarer und genauer du beschreibst, was du willst, desto besser wird das Ergebnis.</p>
+      <p style="margin:0 0 10px;font-weight:600">In diesem Workshop siehst du:</p>
+      <div class="grid3">
+        <div class="mini">
+          <div class="ico">🎯</div>
+          <h3>Die ZIEL-Formel</h3>
+          <p>Vier Bausteine, mit denen aus einer vagen Frage ein präziser Auftrag wird.</p>
+        </div>
+        <div class="mini">
+          <div class="ico">🔁</div>
+          <h3>Iterativ verbessern</h3>
+          <p>Warum der erste Prompt nur der Anfang eines Dialogs mit der KI ist.</p>
+        </div>
+        <div class="mini">
+          <div class="ico">🧸</div>
+          <h3>Toy Yourself</h3>
+          <p>Deine Challenge: eine Vinyl-Toy-Figur, die dich repräsentiert.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Was ist ein Prompt -->
+  <section>
+    <h2><span class="num">1</span> Was ist ein Prompt?</h2>
+    <div class="card">
+      <p>Ein Prompt beschreibt, <strong>was die KI für dich tun soll</strong>. Der Unterschied zwischen „geht so" und „genau das wollte ich" liegt oft nur in ein paar Worten mehr:</p>
+      <div class="compare">
+        <div class="cmp bad">
+          <span class="lbl">✗ Schlechter Prompt</span>
+          <p>„Schreibe einen kurzen Text über Hunde."</p>
+        </div>
+        <div class="cmp good">
+          <span class="lbl">✓ Guter Prompt</span>
+          <p>„Schreibe einen leicht verständlichen Text (ca. 200 Wörter) über Hunde für Kinder im Alter von 10 Jahren. Erkläre, warum Hunde gute Haustiere sind, und verwende eine freundliche Sprache."</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ZIEL-Formel -->
+  <section>
+    <h2><span class="num">2</span> Die ZIEL-Formel</h2>
+    <div class="card">
+      <p>Vier Bausteine machen aus dem Zufall ein Ziel. Merke dir einfach das Wort <strong>ZIEL</strong>:</p>
+      <div class="grid4">
+        <div class="mini">
+          <span class="badge">Z</span>
+          <h3>Ziel</h3>
+          <p>Was soll die KI für dich tun? Formuliere die Aufgabe klar und korrekt.</p>
+        </div>
+        <div class="mini">
+          <span class="badge">I</span>
+          <h3>Informationen</h3>
+          <p>Welche Details, Daten und Rahmenbedingungen sind wichtig?</p>
+        </div>
+        <div class="mini">
+          <span class="badge">E</span>
+          <h3>Erwartungen</h3>
+          <p>Wie soll das Ergebnis aussehen? Form, Struktur, Ton und Stil.</p>
+        </div>
+        <div class="mini">
+          <span class="badge">L</span>
+          <h3>Leitplanken</h3>
+          <p>Gibt es Vorgaben oder Grenzen? Umfang, Ausschlüsse, Anforderungen.</p>
+        </div>
+      </div>
+      <div class="callout">
+        <span class="tag">🔎 Beispiel</span>
+        <p>Aus „Erkläre die Vorteile von Homeoffice." wird mit der ZIEL-Formel: <em>„Erkläre die Vorteile von Homeoffice für ein Unternehmen in einer übersichtlichen Tabelle mit kurzen Erklärungen. Berücksichtige die Aspekte Produktivität, Kosten und Zufriedenheit. Schreibe sachlich und verständlich für Einsteiger. Max. 300 Wörter, keine fachlichen Details."</em></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Iterativ -->
+  <section>
+    <h2><span class="num">3</span> 80&nbsp;% behalten – 20&nbsp;% ändern</h2>
+    <div class="card">
+      <p>Prompting ist kein einmaliger Vorgang, sondern ein <strong>iterativer Designprozess</strong>. Ein guter Prompt ist kein perfekter Prompt – sondern ein guter Ausgangspunkt für einen Dialog mit der KI. Statt alles neu zu schreiben, sagst du gezielt, was bleiben und was sich ändern soll:</p>
+      <div class="grid3">
+        <div class="mini">
+          <div class="ico">🔒</div>
+          <h3>Behalten</h3>
+          <p>„Behalte den Stil der Figur und die Farbpalette bei."</p>
+        </div>
+        <div class="mini">
+          <div class="ico">➕</div>
+          <h3>Ergänzen</h3>
+          <p>„Ergänze ein passendes Accessoire."</p>
+        </div>
+        <div class="mini">
+          <div class="ico">✏️</div>
+          <h3>Ändern</h3>
+          <p>„Ändere die Frisur auf kurze lockige Haare."</p>
+        </div>
+      </div>
+      <div class="tipbox">💡 <strong>Sei konkret statt vage:</strong> statt <em>„schöner"</em> → hochwertiger, realistischer, eleganter · statt <em>„cooler"</em> → futuristischer, minimalistischer, urbaner · statt <em>„mehr Details"</em> → sichtbare Stoffstruktur, feinere Oberflächen, zusätzliche Accessoires. Und: „Alles andere bitte unverändert lassen."</div>
+    </div>
+  </section>
+
+  <!-- Challenge + Prompt -->
+  <section>
+    <h2><span class="num">4</span> Deine Challenge: Toy Yourself</h2>
+    <div class="card">
+      <p>Erstelle mit <strong>Microsoft Copilot</strong> einen Avatar, der <strong>dich</strong> repräsentiert – als hochwertige Vinyl-Toy-Figur im Sammler-Design. Deine Hobbys, Interessen und dein Aussehen fließen mit ein.</p>
+      <p style="margin-bottom:4px">Fülle den Prompt direkt hier auf der Seite aus: Klapp unten <strong>„Prompt ausfüllen &amp; anpassen"</strong> auf, trage deine Angaben ein oder wähle Optionen – die <span class="ph">farbigen Stellen</span> aktualisieren sich sofort. Dann auf <strong>Kopieren</strong> und in Copilot einfügen.</p>
+      <div class="livehead"><span class="pulse"></span> Dein Prompt (aktualisiert sich automatisch):</div>
+      <div class="promptbox">
+        <div class="pbar">
+          <span class="pbar-title">🧸 Toy-Yourself Bild-Prompt</span>
+          <button class="copybtn" id="copyPrompt">Kopieren</button>
+        </div>
+        <pre id="promptPreview"></pre>
+        <div class="pbar pbar-bottom">
+          <span class="pbar-title">Passt? Dann hier kopieren →</span>
+          <button class="copybtn" id="copyPromptBottom">Kopieren</button>
+        </div>
+      </div>
+
+      <details class="config" open>
+        <summary>👉 Prompt ausfüllen &amp; anpassen <span class="sumhint">(hier deine Angaben eintragen)</span></summary>
+        <div class="config-body">
+          <p style="margin:0 0 4px;color:var(--cp-text-muted);font-size:0.92rem">Alles ist optional – was du frei lässt, bleibt als Platzhalter im Prompt und kann später in Copilot ergänzt werden. Bei Mehrfachauswahl kannst du mehrere Punkte anklicken und über das Feld <strong>„eigenes …"</strong> eigene ergänzen.</p>
+          <div id="builder"></div>
+          <button class="freset" id="resetBtn">↺ Alle Eingaben zurücksetzen</button>
+        </div>
+      </details>
+      <div class="callout">
+        <span class="tag">🔁 Und dann?</span>
+        <p>Lass Copilot das erste Bild erzeugen und verfeinere es Schritt für Schritt: <em>„Behalte Stil und Farben bei, ändere aber …"</em>. So erlebst du live, wie aus einem guten Start-Prompt durch kleine, gezielte Änderungen genau deine Figur wird.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Merken -->
+  <section>
+    <h2 style="font-size:1.15rem"><span class="num" style="background:var(--cp-text-muted)">✦</span> Zum Mitnehmen</h2>
+    <div class="card" style="font-size:0.95rem;color:var(--cp-text-muted)">
+      <p style="margin:0;color:var(--cp-text)">Egal ob Bild, Text oder Tabelle – mit der <strong>ZIEL-Formel</strong> (Ziel, Informationen, Erwartungen, Leitplanken) und dem Prinzip <strong>„80&nbsp;% behalten, 20&nbsp;% ändern"</strong> holst du aus jeder KI bessere Ergebnisse. Probier's zu Hause weiter aus – Copilot kannst du kostenlos unter <a href="https://copilot.microsoft.com" target="_blank" rel="noopener noreferrer">copilot.microsoft.com</a> testen.</p>
+    </div>
+  </section>
+
+  <footer>
+    <div>Workshop „Prompting – vom Zufall zum Ziel" &nbsp;·&nbsp; Nacht der Technik · Köln · 3. Juli 2026 · Microsoft</div>
+    <div style="margin-top:6px">Viel Spaß beim Ausprobieren! ✦</div>
+  </footer>
+
+</div>
+
+<script>
+  // ---------- Zustand & Feld-Konfiguration ----------
+  const state = {
+    name: "", alter: "", geschlecht: "",
+    frisur: "", haarfarbe: "", bart: "", brille: "", augenfarbe: "",
+    kleidung: "", schuhe: "", merkmale: "",
+    persoenlichkeit: [], interessen: [],
+  };
+  const customOpts = {}; // key -> eigene (hinzugefügte) Optionen bei Mehrfachauswahl
+
+  const groups = [
+    { title: "👤 Person", fields: [
+      { key: "name", label: "Name", type: "text", placeholder: "z.B. Alex" },
+      { key: "alter", label: "Alter", type: "text", placeholder: "optional, z.B. 30" },
+      { key: "geschlecht", label: "Geschlecht", type: "single", options: ["weiblich", "männlich", "divers", "keine Angabe"] },
+    ]},
+    { title: "🎨 Aussehen", fields: [
+      { key: "frisur", label: "Frisur", type: "text", placeholder: "z.B. kurze braune Haare" },
+      { key: "haarfarbe", label: "Haarfarbe", type: "single", options: ["braun", "blond", "schwarz", "rot", "grau", "weiß"] },
+      { key: "bart", label: "Bart", type: "single", options: ["kein Bart", "Dreitagebart", "Vollbart", "Schnurrbart", "Ziegenbart"] },
+      { key: "brille", label: "Brille", type: "single", options: ["keine Brille", "Brille", "Sonnenbrille", "Hornbrille"] },
+      { key: "augenfarbe", label: "Augenfarbe", type: "single", options: ["blau", "grün", "braun", "grau", "haselnuss"] },
+      { key: "kleidung", label: "Kleidung", type: "text", placeholder: "z.B. Hoodie und Jeans" },
+      { key: "schuhe", label: "Schuhe", type: "text", placeholder: "z.B. weiße Sneaker" },
+      { key: "merkmale", label: "Bes. Merkmale", type: "text", placeholder: "z.B. Sommersprossen, Tattoo" },
+    ]},
+    { title: "✨ Persönlichkeit", hint: "(Mehrfachauswahl)", fields: [
+      { key: "persoenlichkeit", type: "multi", options: ["kreativ", "humorvoll", "technikbegeistert", "sportlich", "neugierig", "ruhig", "abenteuerlustig", "ehrgeizig", "entspannt", "offen", "verspielt"] },
+    ]},
+    { title: "🎯 Interessen", hint: "(Mehrfachauswahl)", fields: [
+      { key: "interessen", type: "multi", options: ["gutes Essen", "Natur & Wandern", "Musik", "Gaming", "Fotografie", "Sport", "Reisen", "Lesen", "Technik", "Kunst", "Filme", "Kochen", "Tiere", "Mode"] },
+    ]},
+  ];
+
+  const preview = document.getElementById("promptPreview");
+  const builder = document.getElementById("builder");
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  // ---------- Builder rendern ----------
+  function render() {
+    builder.innerHTML = "";
+    groups.forEach(g => {
+      const gd = document.createElement("div"); gd.className = "fgroup";
+      const gt = document.createElement("div"); gt.className = "fgroup-title";
+      gt.innerHTML = escapeHtml(g.title) + (g.hint ? ' <span class="fghint">' + escapeHtml(g.hint) + "</span>" : "");
+      gd.appendChild(gt);
+      g.fields.forEach(f => gd.appendChild(renderField(f)));
+      builder.appendChild(gd);
+    });
+    updatePreview();
+  }
+
+  function renderField(f) {
+    const row = document.createElement("div"); row.className = "frow";
+    if (f.label) {
+      const lab = document.createElement("div"); lab.className = "flabel"; lab.textContent = f.label;
+      row.appendChild(lab);
+    }
+    const ctl = document.createElement("div"); ctl.className = "fcontrol";
+
+    if (f.type === "text") {
+      const inp = document.createElement("input");
+      inp.type = "text"; inp.placeholder = f.placeholder || ""; inp.value = state[f.key];
+      inp.addEventListener("input", () => { state[f.key] = inp.value; updatePreview(); });
+      ctl.appendChild(inp);
+    } else if (f.type === "single") {
+      const chips = document.createElement("div"); chips.className = "chips";
+      f.options.forEach(opt => {
+        const b = document.createElement("button");
+        b.className = "chip" + (state[f.key] === opt ? " on" : ""); b.textContent = opt;
+        b.addEventListener("click", () => { state[f.key] = state[f.key] === opt ? "" : opt; render(); });
+        chips.appendChild(b);
+      });
+      ctl.appendChild(chips);
+    } else if (f.type === "multi") {
+      const chips = document.createElement("div"); chips.className = "chips";
+      const all = f.options.concat(customOpts[f.key] || []);
+      all.forEach(opt => {
+        const isCustom = (customOpts[f.key] || []).includes(opt);
+        const b = document.createElement("button");
+        b.className = "chip" + (state[f.key].includes(opt) ? " on" : "");
+        b.innerHTML = escapeHtml(opt) + (isCustom ? '<span class="x">×</span>' : "");
+        b.addEventListener("click", () => {
+          if (isCustom) customOpts[f.key] = customOpts[f.key].filter(c => c !== opt);
+          const i = state[f.key].indexOf(opt);
+          if (i >= 0) state[f.key].splice(i, 1); else state[f.key].push(opt);
+          render();
+        });
+        chips.appendChild(b);
+      });
+      const addwrap = document.createElement("span"); addwrap.className = "addwrap";
+      const inp = document.createElement("input"); inp.type = "text"; inp.placeholder = "eigenes …";
+      const addbtn = document.createElement("button"); addbtn.className = "addbtn"; addbtn.textContent = "+"; addbtn.title = "Hinzufügen";
+      const doAdd = () => {
+        const v = inp.value.trim();
+        if (v && !f.options.includes(v) && !(customOpts[f.key] || []).includes(v)) {
+          (customOpts[f.key] = customOpts[f.key] || []).push(v);
+          state[f.key].push(v); inp.value = ""; render();
+        }
+      };
+      addbtn.addEventListener("click", doAdd);
+      inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); doAdd(); } });
+      addwrap.appendChild(inp); addwrap.appendChild(addbtn);
+      chips.appendChild(addwrap);
+      ctl.appendChild(chips);
+    }
+    row.appendChild(ctl);
+    return row;
+  }
+
+  // ---------- Prompt zusammensetzen ----------
+  function seg(value, ph) {
+    const filled = value && String(value).trim();
+    if (filled) return { t: value.trim(), h: '<span class="ph">' + escapeHtml(value.trim()) + "</span>" };
+    return { t: ph, h: '<span class="ph-empty">' + escapeHtml(ph) + "</span>" };
+  }
+  function listBlock(arr, placeholders) {
+    let t = "", h = "";
+    const items = arr.length ? arr : null;
+    (items || placeholders).forEach((x, i) => {
+      const nl = i ? "\n" : "";
+      const cls = items ? "ph" : "ph-empty";
+      t += nl + "- " + x;
+      h += nl + "- " + '<span class="' + cls + '">' + escapeHtml(x) + "</span>";
+    });
+    return { t, h };
+  }
+  function buildPrompt() {
+    let t = "", h = "";
+    const add = s => { t += s; h += escapeHtml(s); };
+    const addSeg = (value, ph) => { const s = seg(value, ph); t += s.t; h += s.h; };
+
+    add("Du bist ein professioneller Character Designer und Designer für hochwertige Vinyl Toys.\n\nErstelle ein detailreiches Konzeptbild einer stylischen Vinyl Toy Figur im Sammler-Design.\n\n## Person\n\nName: ");
+    addSeg(state.name, "[Name]");
+    add("\nAlter: "); addSeg(state.alter, "[optional]");
+    add("\nGeschlecht: "); addSeg(state.geschlecht, "[optional]");
+    add("\n\n## Aussehen\n\n- Frisur: "); addSeg(state.frisur, "[z.B. kurze braune Haare]");
+    add("\n- Haarfarbe: "); addSeg(state.haarfarbe, "[...]");
+    add("\n- Bart: "); addSeg(state.bart, "[...]");
+    add("\n- Brille: "); addSeg(state.brille, "[...]");
+    add("\n- Augenfarbe: "); addSeg(state.augenfarbe, "[...]");
+    add("\n- Kleidung: "); addSeg(state.kleidung, "[...]");
+    add("\n- Schuhe: "); addSeg(state.schuhe, "[...]");
+    add("\n- Besondere Merkmale: "); addSeg(state.merkmale, "[...]");
+    add("\n\n## Persönlichkeit\n\nBeschreibe die Figur so, dass sie diese Eigenschaften ausstrahlt:\n\n");
+    const pers = listBlock(state.persoenlichkeit, ["[z.B. kreativ]", "[humorvoll]", "[technikbegeistert]", "[sportlich]"]);
+    t += pers.t; h += pers.h;
+    add("\n\n## Interessen\n\nDie Figur soll folgende Hobbys und Interessen widerspiegeln:\n\n");
+    const intr = listBlock(state.interessen, ["[...]", "[...]", "[...]"]);
+    t += intr.t; h += intr.h;
+    add("\n\nIntegriere diese Interessen als passende Accessoires oder Designelemente.\n\n## Stil\n\nDie Figur soll aussehen wie ein hochwertiges Designer Vinyl Toy.\n\nEigenschaften:\n\n- großer Kopf\n- kleiner Körper\n- leicht überzeichnet\n- hochwertiger Kunststoff\n- glatte Oberflächen\n- dezente Texturen\n- klare Formen\n- moderne Farbpalette\n- sympathischer Gesichtsausdruck\n- hohe Wiedererkennbarkeit\n\nStilrichtung:\n\n- Premium Collectible\n- Urban Designer Toy\n- Minimalistisch\n- Hochwertiges Produktdesign\n- keine Comiczeichnung\n- keine Animefigur\n- keine Actionfigur\n\n## Präsentation\n\nDie Figur steht auf einem kleinen Sockel.\n\nDaneben liegen passend gestaltete Accessoires, die die Interessen repräsentieren.\n\nHintergrund:\n\nsauberer heller Studio-Hintergrund mit weichem Licht.\n\nPerspektive:\n\n3/4-Ansicht auf Augenhöhe.\n\n## Bildqualität\n\nUltra detailliert\n\nPhotorealistisch\n\nProfessionelles Produktfoto\n\n8K\n\nPerfekte Beleuchtung\n\nScharfer Fokus\n\nHochwertiges Rendering\n\nDie Figur soll wirken, als könnte sie sofort als Designer Vinyl Toy verkauft werden.");
+    return { text: t, html: h };
+  }
+  function updatePreview() { preview.innerHTML = buildPrompt().html; }
+
+  function flash(btn, label) {
+    const old = btn.dataset.label || btn.textContent;
+    btn.dataset.label = old;
+    btn.textContent = label || "✓ Kopiert";
+    btn.classList.add("done");
+    setTimeout(() => { btn.textContent = btn.dataset.label; btn.classList.remove("done", "fail"); }, 1800);
+  }
+  function flashFail(btn) {
+    const old = btn.dataset.label || btn.textContent;
+    btn.dataset.label = old;
+    btn.textContent = "Bitte Strg+C";
+    btn.classList.add("fail");
+    setTimeout(() => { btn.textContent = btn.dataset.label; btn.classList.remove("done", "fail"); }, 2400);
+  }
+
+  // Maximale Kompatibilität (auch eingebettete Browser wie Teams):
+  // 1) Async Clipboard-API, 2) Fallback execCommand, 3) Text markieren für Strg+C.
+  function copyText(text, btn, selectEl) {
+    if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(() => flash(btn)).catch(() => legacyCopy(text, btn, selectEl));
+    } else {
+      legacyCopy(text, btn, selectEl);
+    }
+  }
+  function legacyCopy(text, btn, selectEl) {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.top = "-1000px";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try { ta.setSelectionRange(0, text.length); } catch (e) {}
+      const ok = document.execCommand && document.execCommand("copy");
+      document.body.removeChild(ta);
+      if (ok) { flash(btn); return; }
+    } catch (e) { /* ignore */ }
+    if (selectEl) {
+      try {
+        const range = document.createRange();
+        range.selectNodeContents(selectEl);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } catch (e) {}
+    }
+    flashFail(btn);
+  }
+
+  function currentText() { return buildPrompt().text; }
+  document.getElementById("copyPrompt").addEventListener("click", e => {
+    copyText(currentText(), e.currentTarget, preview);
+  });
+  document.getElementById("copyPromptBottom").addEventListener("click", e => {
+    copyText(currentText(), e.currentTarget, preview);
+  });
+  document.getElementById("resetBtn").addEventListener("click", () => {
+    ["name", "alter", "geschlecht", "frisur", "haarfarbe", "bart", "brille", "augenfarbe", "kleidung", "schuhe", "merkmale"].forEach(k => state[k] = "");
+    state.persoenlichkeit = []; state.interessen = [];
+    Object.keys(customOpts).forEach(k => delete customOpts[k]);
+    render();
+  });
+
+  render();
+
+</script>
+
+</body>
+</html>
